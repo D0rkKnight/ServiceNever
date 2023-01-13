@@ -1,0 +1,128 @@
+[
+    {
+        "type": "DUO Reactivation",
+        "logic": [
+            {
+                "options": [
+                    "Customer has a new phone number",
+                    "Customer has the same phone number",
+                    "Customer does not mention phone number is the same or not"
+                ],
+                "responses": [
+                    "Since your new phone does not have the same phone number as your old phone, you will need to call in for a DUO reactivation.",
+                    "We've sent a reactivation text to your phone, if you follow the instructions on the text you will be able to use DUO again.",
+                    "Can you let us know if your phone number has the same phone number as before or not?"
+                ]
+            }
+        ]
+    },
+    {
+        "type": "Campus Networking Issue",
+        "logic": [
+            {
+                "options": [
+                    "Customer has a wired connection",
+                    "Customer has a wireless connection",
+                    "Customer does not mention the type of connection"
+                ],
+                "responses": [
+                    "We're glad to help troubleshoot your wired connection!",
+                    "We're glad to help troubleshoot your wireless connection!",
+                    "We're glad to help troubleshoot your connection!"
+                ]
+            },
+            {
+                "options": [
+                    "There is limited, laggy, or stuttery connection",
+                    "There is no connection"
+                ],
+                "responses": [
+                    "There is limited connection",
+                    "There is no connection"
+                ]
+            },
+            {
+                "options": [
+                    "Device is windows",
+                    "Device is mac",
+                    "Device is linux",
+                    "Device is android",
+                    "Device is ios",
+                    "Device is other"
+                ],
+                "responses": [
+                    "Device is windows",
+                    "Device is mac",
+                    "Device is linux",
+                    "Device is android",
+                    "Device is ios",
+                    "Device is other"
+                ]
+            },
+            {
+                "options": [
+                    "The device's IP address is given",
+                    "The device's IP address is not given"
+                ],
+                "responses": [
+                    "IP Address given",
+                    "IP Address not given"
+                ]
+            },
+            {
+                "options": [
+                    "Customer is a student",
+                    "Customer is faculty",
+                    "Customer is visitor"
+                ],
+                "responses": [
+                    "Customer is a student",
+                    "Customer is faculty",
+                    "Customer is visitor"
+                ]
+            },
+            {
+                "options": [
+                    "Customer has tried restarting their device",
+                    "Customer has not tried restarting their device"
+                ],
+                "responses": [
+                    "Customer has tried restarting their device",
+                    "Customer has not tried restarting their device"
+                ]
+            },
+            {
+                "options": [
+                    "Issue is isolated to just the customer",
+                    "Issue affects everybody in the suite, assuming it is occuring in a suite",
+                    "Issue affects the whole building"
+                ],
+                "responses": [
+                    "Issue is isolated",
+                    "Issue is suitewide",
+                    "Issue is buildingwide"
+                ]
+            },
+            {
+                "options": [
+                    "The MAC address for the affected device(s) are given",
+                    "The MAC address for the affected device(s) are not given"
+                ],
+                "responses": [
+                    "Mac address given",
+                    "Mac address not given"
+                ]
+            },
+            {
+                "options": [
+                    "The customer is struggling with the network RESNET-PROTECTED",
+                    "The customer is not struggling with the network RESNET-PROTECTED"
+                ],
+                "responses": [
+                    "RESNET-PROTECTED is affected",
+                    "RESNET-PROTECTED is not affected"
+                ]
+            }
+        ]
+    }
+]

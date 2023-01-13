@@ -1,0 +1,1 @@
+browserify -t require-globify background.js > bg_bundle.js
