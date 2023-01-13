@@ -3,7 +3,7 @@ var decisionCache;
 var scriptCache;
 
 // Build script listing
-const glob = [{name:'canvas',module:require('./scripts/canvas.js')},{name:'duo',module:require('./scripts/duo.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
+const glob = [{name:'duo',module:require('./scripts/duo.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
 const scripts = [];
 for (let i=0; i<glob.length; i++) {
 	scripts[i] = glob[i].module;
@@ -34,15 +34,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	}
 	if (request.action === 'caseRetrieved') {
 		let output = makeCompileCall(decisionCache, scriptCache, request.data);
-		console.log(output);
+
+		// Load in the info even if it's failure info
+		chrome.runtime.sendMessage({
+			action: 'sendSolution',
+			data: output
+		});
 		
-		if (output.success)
-			chrome.runtime.sendMessage({
-				action: 'sendSolution',
-				data: output
-			});
-		
-		else
+		if (!output.success)
 			chrome.runtime.sendMessage({
 				action: 'rebuildDropdowns',
 				data: output
@@ -67,18 +66,22 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 function makeCompileCall(decisions, script, scrapedInfo) {
-	console.log(decisions);
-
 	// Create provider object
 	let provider = {
 		decisions: decisions,
-		dropdowns: [],
+		inputs: [],
 		success: true,
 
-		get: (label, options) => {
-			provider.dropdowns.push({
+		get: (label, type, data) => {
+
+			// Default to a simple data field
+			if (type == null)
+				type = 'checkbox';
+			
+			provider.inputs.push({
 				label: label,
-				options: options
+				data: data,
+				type: type
 			});
 
 			if (decisions[label] != undefined)
@@ -93,11 +96,10 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 
 	const response = script.compile(provider);
 	if (!provider.success) {
-		console.log('compilation failure, more information required');
-
 		return {
 			success: false,
-			dropdowns: provider.dropdowns
+			requiredInputs: provider.inputs,
+			customerResponse: 'compilation failure, more information required'
 		};
 	}
 
@@ -126,28 +128,7 @@ servicedesk@ucsd.edu
 
 	return solution;
 }
-},{"./scripts/canvas.js":2,"./scripts/duo.js":3,"./scripts/wifi.js":4}],2:[function(require,module,exports){
-exports.name = 'Canvas Courses Gone';
-
-var responses = {
-	'recency': [
-		'The issue is recent',
-        'The issue is not recent'
-	]
-};
-
-// Takes a dict of selections and returns a valid output
-// Outputs the message body and not the header or the tail
-exports.compile = function (provider) {
-	let recency = provider.get('recency', 
-		['Recent', 'Not recent']);
-
-	let out = responses['recency'][recency];
-
-	return out;
-
-};
-},{}],3:[function(require,module,exports){
+},{"./scripts/duo.js":2,"./scripts/wifi.js":3}],2:[function(require,module,exports){
 exports.name = 'DUO Reactivation';
 
 var responses = {
@@ -161,18 +142,28 @@ var responses = {
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let phoneNumber = provider.get('phone_number', 
+	let phoneNumber = provider.get('phone_number', 'select',
 		['New phone number', 'Old phone number', 'Unknown']);
 
 	let out = responses['phone_number'][phoneNumber];
 
+	if (phoneNumber == 1) {
+		out += '\n you have a new phone number';
+
+		let bagel = provider.get('bagel', 'select', ['Bagel', 'No Bagel', 'Cream cheese bagel']);
+	} else {
+		provider.success = false;
+	}
+
+	let checkbox = provider.get('yesno', 'checkbox');
+
 	return {
-        response: out,
-        service: 'DUO ',
-        serviceOffering: 'MOBILE'
-    };
+		response: out,
+		service: 'DUO ',
+		serviceOffering: 'MOBILE'
+	};
 };
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 exports.name = 'Network Connectivity';
 
 var responses = {
@@ -217,7 +208,7 @@ exports.compile = function (provider) {
 
 	return {
         response: out,
-        // service: 'Network Connectivity',
+        service: 'Network Connectivity',
         serviceOffering: 'Campus Wireless Networking'
     };
 

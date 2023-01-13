@@ -33,15 +33,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	}
 	if (request.action === 'caseRetrieved') {
 		let output = makeCompileCall(decisionCache, scriptCache, request.data);
-		console.log(output);
+
+		// Load in the info even if it's failure info
+		chrome.runtime.sendMessage({
+			action: 'sendSolution',
+			data: output
+		});
 		
-		if (output.success)
-			chrome.runtime.sendMessage({
-				action: 'sendSolution',
-				data: output
-			});
-		
-		else
+		if (!output.success)
 			chrome.runtime.sendMessage({
 				action: 'rebuildDropdowns',
 				data: output
@@ -66,18 +65,22 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 function makeCompileCall(decisions, script, scrapedInfo) {
-	console.log(decisions);
-
 	// Create provider object
 	let provider = {
 		decisions: decisions,
-		dropdowns: [],
+		inputs: [],
 		success: true,
 
-		get: (label, options) => {
-			provider.dropdowns.push({
+		get: (label, type, data) => {
+
+			// Default to a simple data field
+			if (type == null)
+				type = 'checkbox';
+			
+			provider.inputs.push({
 				label: label,
-				options: options
+				data: data,
+				type: type
 			});
 
 			if (decisions[label] != undefined)
@@ -92,11 +95,10 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 
 	const response = script.compile(provider);
 	if (!provider.success) {
-		console.log('compilation failure, more information required');
-
 		return {
 			success: false,
-			dropdowns: provider.dropdowns
+			requiredInputs: provider.inputs,
+			customerResponse: 'compilation failure, more information required'
 		};
 	}
 

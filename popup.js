@@ -4,6 +4,7 @@ const responsePreview = document.getElementById('response-preview');
 const caseSelect = document.getElementById('case-type-selector');
 
 let optionSelects = [];
+let optionCache = {};
 let solution = null;
 
 // Retrieve scripts
@@ -25,7 +26,7 @@ chrome.runtime.onMessage.addListener(async function(request) {
 		displaySolutionData();
 	}
 	if (request.action === 'rebuildDropdowns') {
-		rebuildDecisionSelector(request.data.dropdowns);
+		rebuildDecisionSelector(request.data.requiredInputs);
 	}
 });
 
@@ -63,6 +64,13 @@ function rebuildDecisionSelector(prompts) {
 
 	// Collect existing encodings
 	let existingDecisions = uiToEncoding();
+	
+	console.log(prompts);
+	console.log(existingDecisions);
+
+	// Store existing options into cache
+	for (let i=0; i<optionSelects.length; i++)
+		optionCache[optionSelects[i].id] = optionSelects[i];
 
 	const encodingSelect = document.getElementById('encoding-selector');
 	encodingSelect.innerHTML = '';
@@ -74,41 +82,57 @@ function rebuildDecisionSelector(prompts) {
 	}
 
 	for (let i=0; i<prompts.length; i++) {
+		let prompt = prompts[i];
+
 		// Create the selector and label with options
-		const itemDropdown = document.createElement('select');
-		itemDropdown.id = `option-${i}`;
+		let inputElement;
 
-		// Add "isn't clear option"
-		const unclear = document.createElement('option');
-		unclear.text = 'unclear';
-		itemDropdown.add(unclear);
+		// If the cache already contains this, just revive the cache.
+		let cache = optionCache[prompt.label];
+		if (cache != undefined && cache.type == prompt.type)
+			inputElement = optionCache[prompt.label].inputElement;
+		
+		else switch (prompt.type) {
+			case 'select':
+				inputElement = document.createElement('select');
 
-		for (let j=0; j<prompts[i].options.length; j++) {
-			const option = document.createElement('option');
-			option.text = prompts[i].options[j];
-			itemDropdown.add(option);
+				// Add "isn't clear option"
+				const unclear = document.createElement('option');
+				unclear.text = 'unclear';
+				inputElement.add(unclear);
+
+				for (let j=0; j<prompts[i].data.length; j++) {
+					const option = document.createElement('option');
+					option.text = prompts[i].data[j];
+					inputElement.add(option);
+				}
+				break;
+			case 'checkbox':
+				// Doesn't need options, just leave it be.
+				inputElement = document.createElement('input');
+				inputElement.type = 'checkbox';
+				break;
 		}
+		
+		inputElement.id = `option-${i}`;
 
 		// Append the selector and label to the form
 		const div = document.createElement('div');
 		div.classList += 'response-option';
-		div.appendChild(itemDropdown);
+		div.appendChild(inputElement);
 
 		encodingSelect.appendChild(div);
 
-		// Save dropdown to list
+		// Save element to list
+		// If the element is cached, it will get reconstructed here, but that reconstruction should be safe.
 		optionSelects.push({
-			dropdown: itemDropdown,
-			id: prompts[i].label
+			inputElement: inputElement,
+			id: prompts[i].label,
+			type: prompts[i].type
 		});
 
-		// Set existing encoding
-		if (existingDecisions.decisions[prompts[i].label] != undefined) {
-			itemDropdown.selectedIndex = existingDecisions.decisions[prompts[i].label];
-		}
-
 		// Add cb to dropdown selection
-		itemDropdown.addEventListener('change', function() {
+		inputElement.addEventListener('change', function() {
 			(async () => {
 				makeCompileCall();
 			})();
@@ -120,7 +144,15 @@ function uiToEncoding() {
 	// Retrieve every dropdown and get its index
 	const decisions = {};
 	for (let i=0; i<optionSelects.length; i++) {
-		decisions[optionSelects[i].id] = optionSelects[i].dropdown.selectedIndex;
+
+		switch (optionSelects[i].type) {
+			case 'select':
+				decisions[optionSelects[i].id] = optionSelects[i].inputElement.selectedIndex;
+				break;
+			case 'checkbox':
+				decisions[optionSelects[i].id] = optionSelects[i].inputElement.checked;
+				break;
+		}
 	}
 
 	let index = caseSelect.selectedIndex;

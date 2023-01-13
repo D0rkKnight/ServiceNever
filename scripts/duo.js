@@ -11,14 +11,24 @@ var responses = {
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let phoneNumber = provider.get('phone_number', 
+	let phoneNumber = provider.get('phone_number', 'select',
 		['New phone number', 'Old phone number', 'Unknown']);
 
 	let out = responses['phone_number'][phoneNumber];
 
+	if (phoneNumber == 1) {
+		out += '\n you have a new phone number';
+
+		let bagel = provider.get('bagel', 'select', ['Bagel', 'No Bagel', 'Cream cheese bagel']);
+	} else {
+		provider.success = false;
+	}
+
+	let checkbox = provider.get('yesno', 'checkbox');
+
 	return {
-        response: out,
-        service: 'DUO ',
-        serviceOffering: 'MOBILE'
-    };
+		response: out,
+		service: 'DUO ',
+		serviceOffering: 'MOBILE'
+	};
 };
