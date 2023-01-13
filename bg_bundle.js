@@ -3,7 +3,7 @@ var decisionCache;
 var scriptCache;
 
 // Build script listing
-const glob = [{name:'duo',module:require('./scripts/duo.js')}];
+const glob = [{name:'canvas',module:require('./scripts/canvas.js')},{name:'duo',module:require('./scripts/duo.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
 const scripts = [];
 for (let i=0; i<glob.length; i++) {
 	scripts[i] = glob[i].module;
@@ -33,7 +33,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 	}
 	if (request.action === 'caseRetrieved') {
-		let output = compile(decisionCache, scriptCache, request.data);
+		let output = makeCompileCall(decisionCache, scriptCache, request.data);
 		console.log(output);
 		
 		if (output.success)
@@ -66,7 +66,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	}
 });
 
-function compile(decisions, script, scrapedInfo) {
+function makeCompileCall(decisions, script, scrapedInfo) {
 	console.log(decisions);
 
 	// Create provider object
@@ -91,7 +91,7 @@ function compile(decisions, script, scrapedInfo) {
 		}
 	};
 
-	const responseText = script.compile(provider);
+	const response = script.compile(provider);
 	if (!provider.success) {
 		console.log('compilation failure, more information required');
 
@@ -106,7 +106,7 @@ function compile(decisions, script, scrapedInfo) {
 
 Thank you for contacting us at the ITS ServiceDesk. 
 
-${responseText}
+${response.response}
 
 If you have any further questions, feel free to email us at servicedesk@ucsd.edu or call us at (858) 246-4357.
 
@@ -119,21 +119,36 @@ servicedesk@ucsd.edu
 
 	const solution = {
 		success: true,
-		customerResponse: output
+		customerResponse: output,
+		service: response.service,
+		serviceOffering: response.serviceOffering
 	};
 
 	return solution;
 }
-},{"./scripts/duo.js":2}],2:[function(require,module,exports){
-exports.name = 'DUO Reactivation';
+},{"./scripts/canvas.js":2,"./scripts/duo.js":3,"./scripts/wifi.js":4}],2:[function(require,module,exports){
+exports.name = 'Canvas Courses Gone';
 
-var prompts = [
-	{
-		label: 'phone_number',
-		type: 'selector',
-		options: ['New phone number', 'Old phone number', 'Unknown']
-	}
-];
+var responses = {
+	'recency': [
+		'The issue is recent',
+        'The issue is not recent'
+	]
+};
+
+// Takes a dict of selections and returns a valid output
+// Outputs the message body and not the header or the tail
+exports.compile = function (provider) {
+	let recency = provider.get('recency', 
+		['Recent', 'Not recent']);
+
+	let out = responses['recency'][recency];
+
+	return out;
+
+};
+},{}],3:[function(require,module,exports){
+exports.name = 'DUO Reactivation';
 
 var responses = {
 	'phone_number': [
@@ -146,18 +161,65 @@ var responses = {
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let phoneNumber = provider.get('phone_number', prompts[0].options);
-	let eggman = provider.get('eggman', ['yes', 'no']);
+	let phoneNumber = provider.get('phone_number', 
+		['New phone number', 'Old phone number', 'Unknown']);
 
 	let out = responses['phone_number'][phoneNumber];
 
-	console.log(eggman);
-	if (eggman == 1)
-		out += 'i am the eggman';
-    else
-        provider.success = false;
+	return {
+        response: out,
+        service: 'DUO ',
+        serviceOffering: 'MOBILE'
+    };
+};
+},{}],4:[function(require,module,exports){
+exports.name = 'Network Connectivity';
 
-	return out;
+var responses = {
+	'network': [
+		'unknown',
+		'UCSD Protected',
+		'UCSD Guest',
+		'Resnet Protected',
+		'Resnet Guest Device'
+	],
+	'device': [
+		'unknown',
+		'Mac',
+		'Windows',
+		'Linux',
+		'Android',
+		'iOS',
+		'Other'
+	]
+};
+
+// Takes a dict of selections and returns a valid output
+// Outputs the message body and not the header or the tail
+exports.compile = function (provider) {
+	let network = provider.get('network', 
+		['UCSD Protected', 'UCSD Guest', 'Resnet Protected', 'Resnet Guest Device']);
+	let device = provider.get('device', 
+		['Mac', 'Windows', 'Linux', 'Android', 'iOS', 'Other']);
+
+	let out = 
+    `Your network is ${responses['network'][network]}\nYour device is ${responses['device'][device]}`;
+
+	if (network == 0) {
+		let violence = provider.get('violence', ['Yes', 'No']);
+
+		if (violence == 1) {
+			out += 'what kind of dumbass writes a ticket without even providing the appropriate information you worthless piece of shit';
+		} else {
+			out += 'please send us the network you are struggling with';
+		}
+	}
+
+	return {
+        response: out,
+        // service: 'Network Connectivity',
+        serviceOffering: 'Campus Wireless Networking'
+    };
 
 };
 },{}]},{},[1]);

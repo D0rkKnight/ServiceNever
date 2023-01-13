@@ -5,7 +5,9 @@
     "description": "I am getting paid for this",
     "permissions": ["activeTab", "scripting"],
     "content_scripts": [{
-      "matches": ["https://*/*"],
+      "matches": ["https://support.ucsd.edu/*",
+                  "https://snqa.ucsd.edu/*"            
+    ],
       "js": ["content.js"],
       "css": ["style.css"]
     }],

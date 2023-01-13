@@ -32,7 +32,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 	}
 	if (request.action === 'caseRetrieved') {
-		let output = compile(decisionCache, scriptCache, request.data);
+		let output = makeCompileCall(decisionCache, scriptCache, request.data);
 		console.log(output);
 		
 		if (output.success)
@@ -65,7 +65,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	}
 });
 
-function compile(decisions, script, scrapedInfo) {
+function makeCompileCall(decisions, script, scrapedInfo) {
 	console.log(decisions);
 
 	// Create provider object
@@ -90,7 +90,7 @@ function compile(decisions, script, scrapedInfo) {
 		}
 	};
 
-	const responseText = script.compile(provider);
+	const response = script.compile(provider);
 	if (!provider.success) {
 		console.log('compilation failure, more information required');
 
@@ -105,7 +105,7 @@ function compile(decisions, script, scrapedInfo) {
 
 Thank you for contacting us at the ITS ServiceDesk. 
 
-${responseText}
+${response.response}
 
 If you have any further questions, feel free to email us at servicedesk@ucsd.edu or call us at (858) 246-4357.
 
@@ -118,7 +118,9 @@ servicedesk@ucsd.edu
 
 	const solution = {
 		success: true,
-		customerResponse: output
+		customerResponse: output,
+		service: response.service,
+		serviceOffering: response.serviceOffering
 	};
 
 	return solution;

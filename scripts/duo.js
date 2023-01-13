@@ -1,13 +1,5 @@
 exports.name = 'DUO Reactivation';
 
-var prompts = [
-	{
-		label: 'phone_number',
-		type: 'selector',
-		options: ['New phone number', 'Old phone number', 'Unknown']
-	}
-];
-
 var responses = {
 	'phone_number': [
 		'Since your new phone does not have the same phone number as your old phone, you will need to call in for a DUO reactivation.',
@@ -19,17 +11,14 @@ var responses = {
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let phoneNumber = provider.get('phone_number', prompts[0].options);
-	let eggman = provider.get('eggman', ['yes', 'no']);
+	let phoneNumber = provider.get('phone_number', 
+		['New phone number', 'Old phone number', 'Unknown']);
 
 	let out = responses['phone_number'][phoneNumber];
 
-	console.log(eggman);
-	if (eggman == 1)
-		out += 'i am the eggman';
-    else
-        provider.success = false;
-
-	return out;
-
+	return {
+        response: out,
+        service: 'DUO ',
+        serviceOffering: 'MOBILE'
+    };
 };

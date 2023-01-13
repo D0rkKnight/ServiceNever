@@ -4,6 +4,7 @@ const responsePreview = document.getElementById('response-preview');
 const caseSelect = document.getElementById('case-type-selector');
 
 let optionSelects = [];
+let solution = null;
 
 // Retrieve scripts
 chrome.runtime.sendMessage({ action: 'getProblemTypes' }, function (response) 
@@ -13,19 +14,15 @@ chrome.runtime.sendMessage({ action: 'getProblemTypes' }, function (response)
 
 	chrome.runtime.sendMessage({ action: 'getDecisions', index: caseSelect.selectedIndex}, function (response) {
 		// Make a raw compile request to get initial batch info
-		chrome.runtime.sendMessage(
-			{
-				action: 'compile',
-				data: uiToEncoding(),
-			},
-		);
+		makeCompileCall();
 	});
 });
 
 chrome.runtime.onMessage.addListener(async function(request) {
 	if (request.action === 'sendSolution') {
 		// Write in data
-		responsePreview.innerHTML = request.data.customerResponse;
+		solution = request.data;
+		displaySolutionData();
 	}
 	if (request.action === 'rebuildDropdowns') {
 		rebuildDecisionSelector(request.data.dropdowns);
@@ -34,16 +31,16 @@ chrome.runtime.onMessage.addListener(async function(request) {
 
 // On dropdown change, rebuild encoding selector
 document.getElementById('case-type-selector').addEventListener('change', function() {
-	rebuildDecisionSelector();
+
+	// Zero out decision selector
+	rebuildDecisionSelector([]);
+
+	// Force a compile
+	makeCompileCall();
 });
 
 // Write to case button
 document.getElementById('write-to-case-button').addEventListener('click', function() {
-
-	// Get data
-	var solution = {
-		customerResponse: responsePreview.innerHTML
-	};
 
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
 		chrome.tabs.sendMessage(tabs[0].id, {action: 'writeToCase', data: solution}, 
@@ -79,7 +76,7 @@ function rebuildDecisionSelector(prompts) {
 	for (let i=0; i<prompts.length; i++) {
 		// Create the selector and label with options
 		const itemDropdown = document.createElement('select');
-		itemDropdown.id = `option-${i}`; 
+		itemDropdown.id = `option-${i}`;
 
 		// Add "isn't clear option"
 		const unclear = document.createElement('option');
@@ -113,13 +110,7 @@ function rebuildDecisionSelector(prompts) {
 		// Add cb to dropdown selection
 		itemDropdown.addEventListener('change', function() {
 			(async () => {
-				const uiEncode = uiToEncoding();
-				await chrome.runtime.sendMessage(
-					{
-						action: 'compile',
-						data: uiEncode,
-					},
-				);
+				makeCompileCall();
 			})();
 		});
 	}
@@ -138,4 +129,17 @@ function uiToEncoding() {
 		scriptIndex: index,
 		decisions: decisions,
 	};
+}
+
+function makeCompileCall() {
+	chrome.runtime.sendMessage(
+		{
+			action: 'compile',
+			data: uiToEncoding(),
+		},
+	);
+}
+
+function displaySolutionData() {
+	responsePreview.innerHTML = solution.customerResponse;
 }
