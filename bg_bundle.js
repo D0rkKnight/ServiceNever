@@ -156,6 +156,9 @@ exports.compile = function (provider) {
 	}
 
 	let checkbox = provider.get('yesno', 'checkbox');
+	let input = provider.get('input', 'text');
+
+	out += '\n' + checkbox + '\n' + input;
 
 	return {
 		response: out,

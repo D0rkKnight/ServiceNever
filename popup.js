@@ -107,10 +107,10 @@ function rebuildDecisionSelector(prompts) {
 					inputElement.add(option);
 				}
 				break;
-			case 'checkbox':
+			default:
 				// Doesn't need options, just leave it be.
 				inputElement = document.createElement('input');
-				inputElement.type = 'checkbox';
+				inputElement.type = prompt.type;
 				break;
 		}
 		
@@ -144,15 +144,20 @@ function uiToEncoding() {
 	// Retrieve every dropdown and get its index
 	const decisions = {};
 	for (let i=0; i<optionSelects.length; i++) {
-
+		let element = optionSelects[i].inputElement;
+		let val;
 		switch (optionSelects[i].type) {
 			case 'select':
-				decisions[optionSelects[i].id] = optionSelects[i].inputElement.selectedIndex;
+				val = element.selectedIndex;
 				break;
 			case 'checkbox':
-				decisions[optionSelects[i].id] = optionSelects[i].inputElement.checked;
+				val = element.checked;
 				break;
+			default:
+				val = element.value;
 		}
+
+		decisions[optionSelects[i].id] = val;
 	}
 
 	let index = caseSelect.selectedIndex;
