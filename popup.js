@@ -4,7 +4,7 @@ const responsePreview = document.getElementById('response-preview');
 const caseSelect = document.getElementById('case-type-selector');
 
 let optionSelects = [];
-let optionCache = {};
+let optionCache = {}; // Contains old input objects
 let solution = null;
 
 // Retrieve scripts
@@ -92,6 +92,7 @@ function rebuildDecisionSelector(prompts) {
 		if (cache != undefined && cache.type == prompt.type)
 			inputElement = optionCache[prompt.label].inputElement;
 		
+		// Otherwise, generate a new element
 		else switch (prompt.type) {
 			case 'select':
 				inputElement = document.createElement('select');
@@ -143,22 +144,17 @@ function rebuildDecisionSelector(prompts) {
 function uiToEncoding() {
 	// Retrieve every dropdown and get its index
 	const decisions = {};
-	for (let i=0; i<optionSelects.length; i++) {
-		let element = optionSelects[i].inputElement;
-		let val;
-		switch (optionSelects[i].type) {
-			case 'select':
-				val = element.selectedIndex;
-				break;
-			case 'checkbox':
-				val = element.checked;
-				break;
-			default:
-				val = element.value;
-		}
 
-		decisions[optionSelects[i].id] = val;
+	for (let i=0; i<optionCache.length; i++) {
+		// Load in cached values and assume to be valid
+		decisions[optionCache[i].id] = valFromInputObject(optionCache[i]);
 	}
+
+	for (let i=0; i<optionSelects.length; i++) {
+		decisions[optionSelects[i].id] = valFromInputObject(optionSelects[i]);
+	}
+
+	console.log(decisions);
 
 	let index = caseSelect.selectedIndex;
 
@@ -166,6 +162,19 @@ function uiToEncoding() {
 		scriptIndex: index,
 		decisions: decisions,
 	};
+}
+
+function valFromInputObject(obj) {
+	element = obj.inputElement;
+
+	switch (obj.type) {
+		case 'select':
+			return element.selectedIndex;
+		case 'checkbox':
+			return element.checked;
+		default:
+			return element.value;
+	}
 }
 
 function makeCompileCall() {

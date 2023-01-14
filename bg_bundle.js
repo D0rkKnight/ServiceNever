@@ -40,12 +40,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 			action: 'sendSolution',
 			data: output
 		});
-		
-		if (!output.success)
-			chrome.runtime.sendMessage({
-				action: 'rebuildDropdowns',
-				data: output
-			});
+	
+		chrome.runtime.sendMessage({
+			action: 'rebuildDropdowns',
+			data: output
+		});
 	}
 
 	if (request.action === 'getProblemTypes') {
@@ -88,7 +87,8 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 				return decisions[label];
 			
 			else {
-				provider.success = false;
+				// Don't fail the provider, let it continue to build the output
+				// provider.success = false;
 				return null;
 			}
 		}
@@ -123,7 +123,8 @@ servicedesk@ucsd.edu
 		success: true,
 		customerResponse: output,
 		service: response.service,
-		serviceOffering: response.serviceOffering
+		serviceOffering: response.serviceOffering,
+		requiredInputs: provider.inputs
 	};
 
 	return solution;
