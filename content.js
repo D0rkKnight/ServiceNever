@@ -42,6 +42,7 @@ async function autofillCase(data) {
 	const responseBox = doc.getElementById('activity-stream-textarea');
 	const serviceOffering = doc.getElementById('sys_display.sn_customerservice_case.service_offering');
 	const service = doc.getElementById('sys_display.sn_customerservice_case.business_service');
+	const assignmentGroup = doc.getElementById('sys_display.sn_customerservice_case.assignment_group');
 
 	if (data.customerResponse != null)
 		responseBox.value = data.customerResponse;
@@ -49,6 +50,9 @@ async function autofillCase(data) {
 		serviceOffering.value = data.serviceOffering;
 	if (data.service != null)
 		service.value = data.service;
+	if (data.assignmentGroup != null)
+		assignmentGroup.value = data.assignmentGroup;
+
 }
 
 function getDoc() {

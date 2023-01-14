@@ -118,13 +118,10 @@ servicedesk@ucsd.edu
 (858) 246-4357
 `;
 
-	const solution = {
-		success: true,
-		customerResponse: output,
-		service: response.service,
-		serviceOffering: response.serviceOffering,
-		requiredInputs: provider.inputs
-	};
+	let solution = response;
+	solution.customerResponse = output;
+	solution.success = true;
+	solution.requiredInputs = provider.inputs;
 
 	return solution;
 }

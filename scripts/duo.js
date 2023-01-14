@@ -32,6 +32,7 @@ exports.compile = function (provider) {
 	return {
 		response: out,
 		service: 'DUO ',
-		serviceOffering: 'MOBILE'
+		serviceOffering: 'MOBILE',
+		assignmentGroup: 'ITS Service Desk'
 	};
 };
