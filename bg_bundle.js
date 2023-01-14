@@ -131,40 +131,61 @@ servicedesk@ucsd.edu
 },{"./scripts/duo.js":2,"./scripts/vpn.js":3,"./scripts/wifi.js":4}],2:[function(require,module,exports){
 exports.name = 'DUO Reactivation';
 
-var responses = {
-	'phone_number': [
-		'Since your new phone does not have the same phone number as your old phone, you will need to call in for a DUO reactivation.',
-		'We\'ve sent a reactivation text to your phone, if you follow the instructions on the text you will be able to use DUO again.',
-		'Can you let us know if your phone number has the same phone number as before or not?'
-	]
-};
-
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let phoneNumber = provider.get('phone_number', 'select',
+	let requestType = provider.get('requestType', 'select', ['Reactivation', 'Install DUO', 'Add device']);
+	let out = '';
+
+	if (requestType == 1) {
+		let phoneNumber = provider.get('phone_number', 'select',
 		['New phone number', 'Old phone number', 'Unknown']);
 
-	let out = responses['phone_number'][phoneNumber];
-
-	if (phoneNumber == 1) {
-		out += '\n you have a new phone number';
-
-		let bagel = provider.get('bagel', 'select', ['Bagel', 'No Bagel', 'Cream cheese bagel']);
-	} else {
-		provider.success = false;
+		if (phoneNumber == 1) {
+			out += 'Since your new phone does not have the same phone number as your old phone, you will need to call in for a DUO reactivation.\n';
+		}
+		else if (phoneNumber == 2) {
+			out += 'We\'ve sent a reactivation text to your phone, if you follow the instructions on the text you will be able to use DUO again.\n';
+		}
+		else if (phoneNumber == 3) {
+			out += 'Can you let us know if your phone number has the same phone number as before or not?\n';
+		}
 	}
+	else if (requestType == 2) {
+		let device = provider.get('device', 'select', ['iPhone', 'Android', 'Other']);
+		let deviceName = provider.get('deviceName', 'text');
 
-	let checkbox = provider.get('yesno', 'checkbox');
-	let input = provider.get('input', 'text');
+		if (device == 1) {
+			out += 'We\'ve sent you a link to download the DUO app for your iPhone. You can download the app from the link below:\n';
+			out += 'https://itunes.apple.com/us/app/duo-mobile/id422663827?mt=8\n';
+		}
+		else if (device == 2) {
+			out += 'We\'ve sent you a link to download the DUO app for your Android phone. You can download the app from the link below:\n';
+			out += 'https://play.google.com/store/apps/details?id=com.duosecurity.duomobile&hl=en_US\n';
+		}
+		else if (device == 3) {
+			out += `You can't get DUO on that.\n`;
+		}
+	}
+	else if (requestType == 3) {
+		let alreadyHasDevice = provider.get('alreadyHasDevice', 'checkbox');
 
-	out += '\n' + checkbox + '\n' + input;
+		if (alreadyHasDevice) {
+			out += 'You can add your device by following the steps below:\n';
+			out += '1. Go to https://duo.ucsd.edu\n';
+			out += '2. Click on the "Add a device" button\n';
+			out += '3. Follow the instructions on the screen\n';
+		}
+		else {
+			out += 'You will need to either call in or come to our front desk to have your device added to your account.\n';
+		}
+	}
 
 	return {
 		response: out,
-		service: 'DUO ',
-		serviceOffering: 'MOBILE',
-		assignmentGroup: 'ITS Service Desk'
+		service: 'Access & Identity Management',
+		serviceOffering: 'MultiFactor Authentication',
+		assignmentGroup: 'ITS-ServiceDesk'
 	};
 };
 },{}],3:[function(require,module,exports){
@@ -175,45 +196,43 @@ exports.name = 'VPN';
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
+
     let campus = provider.get('campus', 'select', ['UCSD', 'UCSD Health']);
     let device = provider.get('device', 'select', ['MacOS', 'Windows', 'iOS', 'Android']);
-
-    let stageReached = provider.get('stageReached', 'select', ['Connected to VPN', 'DUO authenticated']);
-    let issue = provider.get('issue', 'select', ['Can\'t connect to VPN', 'Laggy connection']);
-
-    let duoPushesGoingThru = provider.get('duoPushesGoingThru', 'checkbox');
+    let domainName;
 
     out = 'For issues connecting to the UCSD / Health VPN, please follow the steps below:\n\n';
 
     if (campus == 1) {
-        out += '1. Go to https://vpn.ucsd.edu\n';
         out += 'You can refer to this document for more information: https://blink.ucsd.edu/technology/network/connections/off-campus/VPN/\n'
+
+        domainName = 'vpn.ucsd.edu';
     }
     else if (campus == 2) {
-        out += '1. Go to https://vpn.ucsdhealth.edu\n';
         out += 'You can refer to this document for more information: -insert health vpn guide-\n'
+        
+        domainName = 'ucsdh-vpn.ucsd.edu';
     } else
         provider.success = false;
+
+    let failureReason = provider.get('stageReached', 'select', 
+        ['Can\'t find domain', 'Login failure', 'Laggy']
+        );
     
-    if (duoPushesGoingThru) {
-        let duoPushBeingReceived = provider.get('duoPushBeingReceived', 'checkbox');
-        if (!duoPushBeingReceived) {
-            out += '2. Make sure you have the DUO app installed on your device and you are accepting the duo pushes when they come through\n';
-        }
+    if (failureReason == 1) {
+        out += 'Make sure you are using the correct domain name. If you are using the wrong domain name, you will be unable to connect to the VPN.\n';
+        out += `The correct domain name is: ${domainName}\n`;
     }
 
-    if (issue == 1) {
-        let stageFailed = provider.get('stageFailed', 'select', ['Domain selection', 'Credentials input']);
+    if (failureReason == 2) {
+        out += 'Make sure you are using the correct username and password. If you are using the wrong username and password, you will be unable to connect to the VPN.\n';
+        out += 'Your username should be your UCSD username.\n'
+        out += 'Your password should be your UCSD password.\n'
 
-        if (stageFailed == 0)
-            out += 'Let us know which stage you are struggling to connect to the VPN with\n';
-
-        if (stageFailed == 1)
-            out += '2. Make sure you are selecting the correct domain\n';
-        
-        if (stageFailed == 2)
-            out += '2. Make sure you are entering the correct username and password\n';
-        
+        let duoAccepted = provider.get('duoAccepted', 'checkbox');
+        if (!duoAccepted) {
+            out += 'Logging in requires a DUO authentication. We see that you are being sent DUO push requests, but you are not accepting the push requests. If you are not receiving those push requests or are unable to accept them, please let us know.\n';
+        }
     }
 
 	return {

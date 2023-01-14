@@ -94,6 +94,15 @@ function rebuildDecisionSelector(prompts, previousData) {
 					inputElement.selectedIndex = prev;
 
 				break;
+
+			case 'checkbox':
+				inputElement = document.createElement('input');
+				inputElement.type = 'checkbox';
+
+				if (prev !== undefined)
+					inputElement.checked = prev;
+				break;
+				
 			default:
 				// Doesn't need options, just leave it be.
 				inputElement = document.createElement('input');
