@@ -4,19 +4,16 @@ const responsePreview = document.getElementById('response-preview');
 const caseSelect = document.getElementById('case-type-selector');
 
 let optionSelects = [];
-let optionCache = {}; // Contains old input objects
 let solution = null;
 
 // Retrieve scripts
 chrome.runtime.sendMessage({ action: 'getProblemTypes' }, function (response) 
 {
 	// Write data into ui
-	rebuildCaseTypeSelector(response);
+	rebuildCaseTypeSelector(response.names);
+	caseSelect.selectedIndex = response.index;
 
-	chrome.runtime.sendMessage({ action: 'getDecisions', index: caseSelect.selectedIndex}, function (response) {
-		// Make a raw compile request to get initial batch info
-		makeCompileCall();
-	});
+	makeCompileCall();
 });
 
 chrome.runtime.onMessage.addListener(async function(request) {
@@ -26,17 +23,14 @@ chrome.runtime.onMessage.addListener(async function(request) {
 		displaySolutionData();
 	}
 	if (request.action === 'rebuildDropdowns') {
-		rebuildDecisionSelector(request.data.requiredInputs);
+		rebuildDecisionSelector(request.data.requiredInputs, request.decisions);
 	}
 });
 
 // On dropdown change, rebuild encoding selector
 document.getElementById('case-type-selector').addEventListener('change', function() {
 
-	// Zero out decision selector
-	rebuildDecisionSelector([]);
-
-	// Force a compile
+	// Force a compile which will also refresh the decision selector
 	makeCompileCall();
 });
 
@@ -60,17 +54,9 @@ function rebuildCaseTypeSelector(types) {
 }
 
 // Initializes to null
-function rebuildDecisionSelector(prompts) {
+function rebuildDecisionSelector(prompts, previousData) {
 
-	// Collect existing encodings
-	let existingDecisions = uiToEncoding();
-	
-	console.log(prompts);
-	console.log(existingDecisions);
-
-	// Store existing options into cache
-	for (let i=0; i<optionSelects.length; i++)
-		optionCache[optionSelects[i].id] = optionSelects[i];
+	console.log(previousData);
 
 	const encodingSelect = document.getElementById('encoding-selector');
 	encodingSelect.innerHTML = '';
@@ -86,14 +72,10 @@ function rebuildDecisionSelector(prompts) {
 
 		// Create the selector and label with options
 		let inputElement;
-
-		// If the cache already contains this, just revive the cache.
-		let cache = optionCache[prompt.label];
-		if (cache != undefined && cache.type == prompt.type)
-			inputElement = optionCache[prompt.label].inputElement;
+		let prev = previousData[prompts[i].label];
 		
-		// Otherwise, generate a new element
-		else switch (prompt.type) {
+		// Generate a new element
+		switch (prompt.type) {
 			case 'select':
 				inputElement = document.createElement('select');
 
@@ -107,19 +89,31 @@ function rebuildDecisionSelector(prompts) {
 					option.text = prompts[i].data[j];
 					inputElement.add(option);
 				}
+
+				if (prev !== undefined)
+					inputElement.selectedIndex = prev;
+
 				break;
 			default:
 				// Doesn't need options, just leave it be.
 				inputElement = document.createElement('input');
 				inputElement.type = prompt.type;
+
+				if (prev !== undefined)
+					inputElement.value = prev;
 				break;
 		}
 		
 		inputElement.id = `option-${i}`;
 
+		// Create label for input element
+		const label = document.createElement('label');
+		label.innerHTML = prompts[i].label;
+
 		// Append the selector and label to the form
 		const div = document.createElement('div');
 		div.classList += 'response-option';
+		div.appendChild(label);
 		div.appendChild(inputElement);
 
 		encodingSelect.appendChild(div);
@@ -131,6 +125,8 @@ function rebuildDecisionSelector(prompts) {
 			id: prompts[i].label,
 			type: prompts[i].type
 		});
+
+		// Write to the input element if there is previous data
 
 		// Add cb to dropdown selection
 		inputElement.addEventListener('change', function() {
@@ -145,16 +141,9 @@ function uiToEncoding() {
 	// Retrieve every dropdown and get its index
 	const decisions = {};
 
-	for (let i=0; i<optionCache.length; i++) {
-		// Load in cached values and assume to be valid
-		decisions[optionCache[i].id] = valFromInputObject(optionCache[i]);
-	}
-
 	for (let i=0; i<optionSelects.length; i++) {
 		decisions[optionSelects[i].id] = valFromInputObject(optionSelects[i]);
 	}
-
-	console.log(decisions);
 
 	let index = caseSelect.selectedIndex;
 

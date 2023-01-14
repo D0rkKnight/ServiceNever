@@ -1,5 +1,5 @@
-var decisionCache;
-var scriptCache;
+var decisionCache = {};
+var scriptIndexCache = 0;
 
 // Build script listing
 const glob = require('./scripts/*.js', {mode: 'list'});
@@ -15,8 +15,11 @@ for (let i=0; i<glob.length; i++) {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	if (request.action === 'compile') {
 
-		decisionCache = request.data.decisions;
-		scriptCache = scripts[request.data.scriptIndex];
+		// Write in new decisions
+		for (const [key, value] of Object.entries(request.data.decisions))
+			decisionCache[key] = value;
+
+		scriptIndexCache = request.data.scriptIndex;
 
 		// Grab the case
 		chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -32,7 +35,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 	}
 	if (request.action === 'caseRetrieved') {
-		let output = makeCompileCall(decisionCache, scriptCache, request.data);
+		let output = makeCompileCall(decisionCache, scripts[scriptIndexCache], request.data);
 
 		// Load in the info even if it's failure info
 		chrome.runtime.sendMessage({
@@ -42,7 +45,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	
 		chrome.runtime.sendMessage({
 			action: 'rebuildDropdowns',
-			data: output
+			data: output,
+			decisions: decisionCache
 		});
 	}
 
@@ -53,13 +57,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 		for (let i=0; i<scripts.length; i++) {
 			ret.push(scripts[i].name);
 		}
-		sendResponse(ret);
-	}
-
-	if (request.action === 'getDecisions') {
-		let scr = scripts[request.index];
-
-		sendResponse(scr.prompts);
+		sendResponse(
+			{
+			names: ret,
+			index: scriptIndexCache
+		});
 	}
 });
 
@@ -94,7 +96,7 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 	};
 
 	const response = script.compile(provider);
-	if (!provider.success) {
+	if (!provider.success || response == null) {
 		return {
 			success: false,
 			requiredInputs: provider.inputs,

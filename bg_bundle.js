@@ -1,9 +1,9 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-var decisionCache;
-var scriptCache;
+var decisionCache = {};
+var scriptIndexCache = 0;
 
 // Build script listing
-const glob = [{name:'duo',module:require('./scripts/duo.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
+const glob = [{name:'duo',module:require('./scripts/duo.js')},{name:'vpn',module:require('./scripts/vpn.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
 const scripts = [];
 for (let i=0; i<glob.length; i++) {
 	scripts[i] = glob[i].module;
@@ -16,8 +16,11 @@ for (let i=0; i<glob.length; i++) {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	if (request.action === 'compile') {
 
-		decisionCache = request.data.decisions;
-		scriptCache = scripts[request.data.scriptIndex];
+		// Write in new decisions
+		for (const [key, value] of Object.entries(request.data.decisions))
+			decisionCache[key] = value;
+
+		scriptIndexCache = request.data.scriptIndex;
 
 		// Grab the case
 		chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -33,7 +36,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 	}
 	if (request.action === 'caseRetrieved') {
-		let output = makeCompileCall(decisionCache, scriptCache, request.data);
+		let output = makeCompileCall(decisionCache, scripts[scriptIndexCache], request.data);
 
 		// Load in the info even if it's failure info
 		chrome.runtime.sendMessage({
@@ -43,7 +46,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 	
 		chrome.runtime.sendMessage({
 			action: 'rebuildDropdowns',
-			data: output
+			data: output,
+			decisions: decisionCache
 		});
 	}
 
@@ -54,13 +58,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 		for (let i=0; i<scripts.length; i++) {
 			ret.push(scripts[i].name);
 		}
-		sendResponse(ret);
-	}
-
-	if (request.action === 'getDecisions') {
-		let scr = scripts[request.index];
-
-		sendResponse(scr.prompts);
+		sendResponse(
+			{
+			names: ret,
+			index: scriptIndexCache
+		});
 	}
 });
 
@@ -95,7 +97,7 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 	};
 
 	const response = script.compile(provider);
-	if (!provider.success) {
+	if (!provider.success || response == null) {
 		return {
 			success: false,
 			requiredInputs: provider.inputs,
@@ -126,7 +128,7 @@ servicedesk@ucsd.edu
 
 	return solution;
 }
-},{"./scripts/duo.js":2,"./scripts/wifi.js":3}],2:[function(require,module,exports){
+},{"./scripts/duo.js":2,"./scripts/vpn.js":3,"./scripts/wifi.js":4}],2:[function(require,module,exports){
 exports.name = 'DUO Reactivation';
 
 var responses = {
@@ -166,6 +168,62 @@ exports.compile = function (provider) {
 	};
 };
 },{}],3:[function(require,module,exports){
+// For issues connecting to the UCSD / Health VPN
+
+exports.name = 'VPN';
+
+// Takes a dict of selections and returns a valid output
+// Outputs the message body and not the header or the tail
+exports.compile = function (provider) {
+    let campus = provider.get('campus', 'select', ['UCSD', 'UCSD Health']);
+    let device = provider.get('device', 'select', ['MacOS', 'Windows', 'iOS', 'Android']);
+
+    let stageReached = provider.get('stageReached', 'select', ['Connected to VPN', 'DUO authenticated']);
+    let issue = provider.get('issue', 'select', ['Can\'t connect to VPN', 'Laggy connection']);
+
+    let duoPushesGoingThru = provider.get('duoPushesGoingThru', 'checkbox');
+
+    out = 'For issues connecting to the UCSD / Health VPN, please follow the steps below:\n\n';
+
+    if (campus == 1) {
+        out += '1. Go to https://vpn.ucsd.edu\n';
+        out += 'You can refer to this document for more information: https://blink.ucsd.edu/technology/network/connections/off-campus/VPN/\n'
+    }
+    else if (campus == 2) {
+        out += '1. Go to https://vpn.ucsdhealth.edu\n';
+        out += 'You can refer to this document for more information: -insert health vpn guide-\n'
+    } else
+        provider.success = false;
+    
+    if (duoPushesGoingThru) {
+        let duoPushBeingReceived = provider.get('duoPushBeingReceived', 'checkbox');
+        if (!duoPushBeingReceived) {
+            out += '2. Make sure you have the DUO app installed on your device and you are accepting the duo pushes when they come through\n';
+        }
+    }
+
+    if (issue == 1) {
+        let stageFailed = provider.get('stageFailed', 'select', ['Domain selection', 'Credentials input']);
+
+        if (stageFailed == 0)
+            out += 'Let us know which stage you are struggling to connect to the VPN with\n';
+
+        if (stageFailed == 1)
+            out += '2. Make sure you are selecting the correct domain\n';
+        
+        if (stageFailed == 2)
+            out += '2. Make sure you are entering the correct username and password\n';
+        
+    }
+
+	return {
+		response: out,
+		service: 'DUO ',
+		serviceOffering: 'MOBILE',
+		assignmentGroup: 'ITS Service Desk'
+	};
+};
+},{}],4:[function(require,module,exports){
 exports.name = 'Network Connectivity';
 
 var responses = {

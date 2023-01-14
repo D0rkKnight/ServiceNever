@@ -1,6 +1,10 @@
 .response-option {
     margin-top: 5px;
     margin-bottom: 5px;
+
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
 }
 
 .content-box-div {
@@ -15,4 +19,18 @@
     padding: 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+}
+
+#main-interface-body > div {
+    display: inline-block;
+    vertical-align: top;
+}
+
+#main-interface-body {
+    white-space: nowrap;
+}
+
+#response-preview {
+    width: 300px;
+    white-space: pre-line;
 }
