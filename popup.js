@@ -185,5 +185,5 @@ function makeCompileCall() {
 }
 
 function displaySolutionData() {
-	responsePreview.innerHTML = solution.customerResponse;
+	responsePreview.innerHTML = solution.response;
 }

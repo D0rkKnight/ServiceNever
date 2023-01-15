@@ -3,8 +3,15 @@ exports.name = 'DUO Reactivation';
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let requestType = provider.get('requestType', 'select', ['Reactivation', 'Install DUO', 'Add device']);
+	let requestType = provider.get('requestType', 'select', ['Reactivation', 'Install DUO', 'Add device', 'Escalation Test']);
 	let out = '';
+
+	let format = {
+		response: out,
+		service: 'Access & Identity Management',
+		service_offering: 'MultiFactor Authentication',
+		assignment_group: 'ITS-ServiceDesk'
+	}
 
 	if (requestType == 1) {
 		let phoneNumber = provider.get('phone_number', 'select',
@@ -49,11 +56,11 @@ exports.compile = function (provider) {
 			out += 'You will need to either call in or come to our front desk to have your device added to your account.\n';
 		}
 	}
+	else if (requestType == 4) {
 
-	return {
-		response: out,
-		service: 'Access & Identity Management',
-		serviceOffering: 'MultiFactor Authentication',
-		assignmentGroup: 'ITS-ServiceDesk'
-	};
+		// Invoke the compile of another script!
+		format = provider.call('escalation');
+	}
+
+	return format;
 };

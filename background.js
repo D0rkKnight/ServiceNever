@@ -66,11 +66,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 function makeCompileCall(decisions, script, scrapedInfo) {
+	
 	// Create provider object
 	let provider = {
 		decisions: decisions,
 		inputs: [],
 		success: true,
+		case: scrapedInfo,
+		scripts: scripts,
 
 		get: (label, type, data) => {
 
@@ -92,6 +95,18 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 				// provider.success = false;
 				return null;
 			}
+		},
+
+		call: (scriptName) => {
+			// Search for the script
+			for (let i=0; i<scripts.length; i++) {
+				if (scripts[i].filename == scriptName) {
+					return scripts[i].compile(provider);
+				}
+			}
+
+			console.error(`Script ${scriptName} not found!`);
+			return null;
 		}
 	};
 
@@ -121,7 +136,7 @@ servicedesk@ucsd.edu
 `;
 
 	let solution = response;
-	solution.customerResponse = output;
+	solution.response = output;
 	solution.success = true;
 	solution.requiredInputs = provider.inputs;
 

@@ -3,7 +3,7 @@ var decisionCache = {};
 var scriptIndexCache = 0;
 
 // Build script listing
-const glob = [{name:'duo',module:require('./scripts/duo.js')},{name:'vpn',module:require('./scripts/vpn.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
+const glob = [{name:'duo',module:require('./scripts/duo.js')},{name:'duo_call',module:require('./scripts/duo_call.js')},{name:'escalation',module:require('./scripts/escalation.js')},{name:'example',module:require('./scripts/example.js')},{name:'vpn',module:require('./scripts/vpn.js')},{name:'wifi',module:require('./scripts/wifi.js')}];
 const scripts = [];
 for (let i=0; i<glob.length; i++) {
 	scripts[i] = glob[i].module;
@@ -67,11 +67,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 function makeCompileCall(decisions, script, scrapedInfo) {
+	
 	// Create provider object
 	let provider = {
 		decisions: decisions,
 		inputs: [],
 		success: true,
+		case: scrapedInfo,
+		scripts: scripts,
 
 		get: (label, type, data) => {
 
@@ -93,6 +96,18 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 				// provider.success = false;
 				return null;
 			}
+		},
+
+		call: (scriptName) => {
+			// Search for the script
+			for (let i=0; i<scripts.length; i++) {
+				if (scripts[i].filename == scriptName) {
+					return scripts[i].compile(provider);
+				}
+			}
+
+			console.error(`Script ${scriptName} not found!`);
+			return null;
 		}
 	};
 
@@ -122,20 +137,27 @@ servicedesk@ucsd.edu
 `;
 
 	let solution = response;
-	solution.customerResponse = output;
+	solution.response = output;
 	solution.success = true;
 	solution.requiredInputs = provider.inputs;
 
 	return solution;
 }
-},{"./scripts/duo.js":2,"./scripts/vpn.js":3,"./scripts/wifi.js":4}],2:[function(require,module,exports){
+},{"./scripts/duo.js":2,"./scripts/duo_call.js":3,"./scripts/escalation.js":4,"./scripts/example.js":5,"./scripts/vpn.js":6,"./scripts/wifi.js":7}],2:[function(require,module,exports){
 exports.name = 'DUO Reactivation';
 
 // Takes a dict of selections and returns a valid output
 // Outputs the message body and not the header or the tail
 exports.compile = function (provider) {
-	let requestType = provider.get('requestType', 'select', ['Reactivation', 'Install DUO', 'Add device']);
+	let requestType = provider.get('requestType', 'select', ['Reactivation', 'Install DUO', 'Add device', 'Escalation Test']);
 	let out = '';
+
+	let format = {
+		response: out,
+		service: 'Access & Identity Management',
+		service_offering: 'MultiFactor Authentication',
+		assignment_group: 'ITS-ServiceDesk'
+	}
 
 	if (requestType == 1) {
 		let phoneNumber = provider.get('phone_number', 'select',
@@ -180,15 +202,61 @@ exports.compile = function (provider) {
 			out += 'You will need to either call in or come to our front desk to have your device added to your account.\n';
 		}
 	}
+	else if (requestType == 4) {
 
-	return {
-		response: out,
-		service: 'Access & Identity Management',
-		serviceOffering: 'MultiFactor Authentication',
-		assignmentGroup: 'ITS-ServiceDesk'
-	};
+		// Invoke the compile of another script!
+		format = provider.call('escalation');
+	}
+
+	return format;
 };
 },{}],3:[function(require,module,exports){
+exports.name = 'DUO Call Cleanup';
+
+exports.compile = function (provider) {
+
+	let contact = provider.get('Account Name', 'text');
+
+    return {
+		response: "",
+		service: 'Access & Identity Management',
+		service_offering: 'MultiFactor Authentication',
+		assignment_group: 'ITS-ServiceDesk',
+		case_type: 'Request',
+		contact: contact,
+
+        short_description: 'Duo Reactivation',
+        description: provider.case.short_description
+	};
+}
+},{}],4:[function(require,module,exports){
+exports.name = 'Escalation';
+
+exports.compile = function (provider) {
+
+	let destination = provider.get('Escalate to', 'text');
+    let out = `Your ticket has been escalated to ${destination}, who will be in contact with you shortly.`
+
+    console.log("reached");
+
+    return {
+		response: out,
+		assignment_group: destination,
+	};
+}
+},{}],5:[function(require,module,exports){
+exports.name = 'Example';
+
+exports.compile = function (provider) {
+
+    return {
+		response: "response",
+		service: 'Example service',
+		service_offering: 'Example offering',
+		assignment_group: 'Example group'
+	};
+}
+},{}],6:[function(require,module,exports){
 // For issues connecting to the UCSD / Health VPN
 
 exports.name = 'VPN';
@@ -242,7 +310,7 @@ exports.compile = function (provider) {
 		assignmentGroup: 'ITS Service Desk'
 	};
 };
-},{}],4:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 exports.name = 'Network Connectivity';
 
 var responses = {
