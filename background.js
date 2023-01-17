@@ -122,11 +122,7 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 	const output =
 		`Hello ${scrapedInfo.Account},
 
-Thank you for contacting us at the ITS ServiceDesk. 
-
-${response.response}
-
-If you have any further questions, feel free to email us at servicedesk@ucsd.edu or call us at (858) 246-4357.
+Thank you for contacting us at the ITS ServiceDesk. ${response.response} If you have any further questions, feel free to email us at servicedesk@ucsd.edu or call us at (858) 246-4357.
 
 Best,
 Hanzen
