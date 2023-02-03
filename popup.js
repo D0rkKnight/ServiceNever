@@ -25,6 +25,9 @@ chrome.runtime.onMessage.addListener(async function(request) {
 	if (request.action === 'rebuildDropdowns') {
 		rebuildDecisionSelector(request.data.requiredInputs, request.decisions);
 	}
+	if (request.action === 'writeDropdown') {
+		setSelectInput(request.data.label, request.data.value);
+	}
 });
 
 // On dropdown change, rebuild encoding selector
@@ -42,6 +45,18 @@ document.getElementById('write-to-case-button').addEventListener('click', functi
 			function(response) {});  
 	});
 });
+
+function setSelectInput(label, value) {
+	for (let i=0; i<optionSelects.length; i++) {
+		const select = optionSelects[i];
+
+		if (label == select.id)
+		{
+			select.inputElement.selectedIndex = value;
+			return;
+		}
+	}
+}
 
 function rebuildCaseTypeSelector(types) {
 	// Build problem listing

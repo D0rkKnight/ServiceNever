@@ -93,6 +93,13 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 			else {
 				// Don't fail the provider, let it continue to build the output
 				// provider.success = false;
+
+				// Make a GPT call here (force write to cache)
+				if (type == 'select') {
+					// Just lock the damn thread until it's done
+					// categorizerRequest(scrapedInfo, data, label);
+				}
+
 				return null;
 			}
 		},
@@ -120,7 +127,7 @@ function makeCompileCall(decisions, script, scrapedInfo) {
 	}
 
 	const output =
-		`Hello ${scrapedInfo.Account},
+		`Hello,
 
 Thank you for contacting us at the ITS ServiceDesk. ${response.response} If you have any further questions, feel free to email us at servicedesk@ucsd.edu or call us at (858) 246-4357.
 
@@ -138,3 +145,75 @@ servicedesk@ucsd.edu
 
 	return solution;
 }
+
+
+
+// AI Autoresolution layer
+async function gptRequest(input) {
+	// GPT model
+	const apiKey = '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';
+	const model = 'text-davinci-003';
+
+	// const response = await fetch(
+	// 	'https://api.openai.com/v1/completions',
+	// 	{
+	// 		method: 'POST',
+	// 		headers: {
+	// 			'Content-Type': 'application/json',
+	// 			'Authorization': `Bearer ${apiKey}`,
+	// 		},
+	// 		body: JSON.stringify({
+	// 			'model': model,
+	// 			'prompt': input,
+	// 			'temperature': 0,
+	// 			'max_tokens': 1000,
+	// 		}),
+	// 	},
+	// );
+
+	// return await response.json();
+}
+
+// // Start inclusive end exclusive
+// async function categorizerRequest(caseToStr, prompt, label) {
+// 	let logic = '';
+
+// 	logic += 'Select one and only one option from below:\n';
+// 	logic += '  0: if the answer is unclear\n';
+
+// 	// Build instructions
+// 	for (let j=0; j<prompt.options.length; j++) {
+// 		logic += `  ${j+1} if: ${prompt.options[j]}\n`;
+// 	}
+
+// 	logic += '\n\n';
+
+// 	const input =
+// `Hi ChatGPT! ${problem.prompt}
+
+// The case information is as follows:
+//     ${caseToStr}
+
+// Existing correspondence are in sequence from oldest to newest as follows:
+//     N/A
+
+// The format of your response will be a number.
+// Base your response on the information given in the case.
+    
+// ${logic}
+// `;
+
+// 	const data = await gptRequest(input);
+
+// 	const output = data.choices[0].text;
+
+// 	// Convert to int
+// 	const tokenizedEncoding = parseInt(output);
+	
+// 	console.log(tokenizedEncoding);
+
+// 	// Write to decision cache and force a recompile
+// 	decisionCache[label] = prompt.options[tokenizedEncoding];
+// 	chrome.runtime.sendMessage({action: "writeDropdown", 
+// 		data: {label: label, value: tokenizedEncoding}});
+// }
