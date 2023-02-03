@@ -1,0 +1,10 @@
+exports.name = 'Health Escalation Transfer';
+
+exports.compile = function (provider) {
+
+    // Transfers and stuff
+    // Needs to see message history
+
+    return {
+	};
+}
